@@ -118,11 +118,6 @@ async function login() {
   }
 }
 
-function showModalText(text) {
-  modal.querySelector("[data-content]").innerText = text
-  modal.showModal()
-}
-
 // 显示消息到html的id元素中。同时在控制台log一下数据
 // 控制台看数据方便一点，但是比较乱
 function myLog(elementId, message, description="", data=null) {
