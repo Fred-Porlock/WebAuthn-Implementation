@@ -4,22 +4,34 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
+    <title>FIDO Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <style>
+      code, pre {
+        font-family: Consolas, monospace;
+        white-space: pre-wrap; /* 保留原格式，但允许自动折行 */
+        word-break: break-all; /* 长单词/连续字符太长也能断开 */
+        max-width: 100%;      /* 限制最大宽度，例如 600px */
+      }
+      #status {
+        white-space: pre-wrap; /* 保留换行符 */
+      }
+    </style>
   </head>
-  <body style="display: flex; flex-direction: column; gap: 1rem">
+  <body style="display: flex; flex-direction: column;">
     <button data-signup style="font-size: 4rem">Sign Up</button>
     <button data-login style="font-size: 4rem">Log In</button>
     <body>
     <h3>status</h3>
     <p id="status"></p>
     <h3>Creation Option</h3>
-    <p id="creationOption"></p>
+    <pre><code class="json" id="creationOption"></code></pre>
     <h3>Created Credential</h3>
-    <p id="createdCred"></p>
+    <pre><code class="json" id="createdCred"></code></pre>
     <h3>Request Option</h3>
-    <p id="requestOption"></p>
+    <pre><code class="json" id="requestOption"></code></pre>
     <h3>Gotten Credential</h3>
-    <p id="gottenCred"></p>
+    <pre><code class="json" id="gottenCred"></code></pre>
     <script type="module" src="/main.js"></script>
   </body>
 </html>

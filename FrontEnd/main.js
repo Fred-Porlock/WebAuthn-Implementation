@@ -1,52 +1,55 @@
+import hljs from 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/es/highlight.min.js';
+
+// 获取按钮
 const signupButton = document.querySelector("[data-signup]")
 const loginButton = document.querySelector("[data-login]")
 
+// 设置按钮函数
 signupButton.addEventListener("click", signup)
 loginButton.addEventListener("click", login)
 
+// 服务器地址
 const SERVER_URL = "http://localhost:5000"
 
 
+// TODO: 把status画成制表符格式的日志
+
 async function signup() {
   // 1. Get challenge from server
+  logStatus("\nStarting registration process...")
+  logStatus("Requesting creation options from server...")
   const initResponse = await fetch(`${SERVER_URL}/init-register`)
   const options = await initResponse.json()
 
   if(!initResponse.ok) {
-    myLog("status", options.error, "Error during registration initialization:", options.error);
+    logStatus("Failed to get creation options from server: " + options.error);
+    console.error("Error during creation initialization:", options.error);
+    return;
   }
+  logStatus("Received creation options from server.");
 
   // 2. Create passkey
 
   // 2.1 处理options格式
   let publicKeyCredentialCreationOptions = JSON.parse(options)
-  // urlbase64 to Uint8Array
+  // convert urlbase64 to Uint8Array
   publicKeyCredentialCreationOptions.challenge = urlSafeBase64ToUint8Array(publicKeyCredentialCreationOptions.challenge)
   publicKeyCredentialCreationOptions.user.id = urlSafeBase64ToUint8Array(publicKeyCredentialCreationOptions.user.id)
 
-  myLog("creationOption", options, "publicKeyCredentialCreationOptions:", publicKeyCredentialCreationOptions)
+  // show creation options
+  showJson("creationOption", publicKeyCredentialCreationOptions)
 
-  // const publicKeyCredentialCreationOptions = {
-  //   challenge: new Uint8Array([0,1,2,3,4,5,6,7,8,9,10]),
-  //   rp: {
-  //     name: "Example FIDO RP",
-  //   },
-  //   user: {
-  //     id: new Uint8Array(16),
-  //     name: email,
-  //     displayName: "bob"
-  //   },
-  //   pubKeyCredParams: [{alg: -7, type: "public-key"}]
-  // }
-
-  // 2.2 创建credential
+  // 2.2 create credential
   const credential = await navigator.credentials.create({
     publicKey: publicKeyCredentialCreationOptions
   })
 
-  myLog("createdCred", JSON.stringify(credential), "Created credential:", credential)
+  // show credential
+  logStatus("Passkey created with creation options.");
+  showJson("createdCred", credential)
 
   // 3. Save passkey in DB
+  logStatus("Verifying registration with server...")
   const verifyResponse = await fetch(`${SERVER_URL}/verify-register`, {
     method: "POST",
     headers: {
@@ -56,23 +59,29 @@ async function signup() {
   })
   const verifyData = await verifyResponse.json()
   if(!verifyResponse.ok) {
-    myLog("status", verifyData.error, "Error during registration verification:", verifyData.error);
+    logStatus("Failed to verify registration: " + verifyData.error);
+    console.error("Error during registration verification:", verifyData.error);
   }
   if(verifyData.verified) {
-    myLog("status", "Successfully registered")
+    logStatus("Registration verified by server.");
   } else {
-    myLog("status", "Failed to register")
+    logStatus("Registration verification failed.");
   }
 }
 
 async function login() {
   // 1. Get challenge from server
+  logStatus("\nStarting authentication process...")
+  logStatus("Requesting authentication options from server...")
   const initResponse = await fetch(`${SERVER_URL}/init-auth`)
   const options = await initResponse.json()
 
   if(!initResponse.ok) {
-    myLog("status", options.error, "Error during registration initialization:", options.error);
+    logStatus("Failed to get authentication options from server: " + options.error);
+    console.error("Error during authentication initialization:", options.error);
+    return;
   }
+  logStatus("Received authentication options from server.");
 
   // 2. Get passkey
 
@@ -82,24 +91,20 @@ async function login() {
   publicKeyCredentialRequestOptions.challenge = urlSafeBase64ToUint8Array(publicKeyCredentialRequestOptions.challenge)
   publicKeyCredentialRequestOptions.allowCredentials[0].id = urlSafeBase64ToUint8Array(publicKeyCredentialRequestOptions.allowCredentials[0].id)
 
-  myLog("requestOption", options, "publicKeyCredentialRequestOptions:", publicKeyCredentialRequestOptions)
-
-  // const publicKeyCredentialRequestOptions = {
-  //   challenge: new Uint8Array([0,1,2,3,4,5,6,7,8,9,10]),
-  //   allowCredentials: [{
-  //     type: "public-key",
-  //     id: rawId
-  //   }]
-  // }
+  // show request options
+  showJson("requestOption", publicKeyCredentialRequestOptions)
 
   // 2.2 获取credential
   const credential = await navigator.credentials.get({
     publicKey: publicKeyCredentialRequestOptions
   })
 
-  myLog("gottenCred", JSON.stringify(credential), "Gotten credential:", credential)
+  // show gotten credential
+  logStatus("Passkey retrieved with authentication options.");
+  showJson("gottenCred", credential)
 
   // 3. Verify passkey
+  logStatus("Verifying authentication with server...")
   const verifyResponse = await fetch(`${SERVER_URL}/verify-auth`, {
     method: "POST",
     headers: {
@@ -109,23 +114,35 @@ async function login() {
   })
   const verifyData = await verifyResponse.json()
   if(!verifyResponse.ok) {
-    myLog("status", verifyData.error, "Error during authentication verification:", verifyData.error);
+    logStatus("Failed to verify authentication: " + verifyData.error);
+    console.error("Error during authentication verification:", verifyData.error);
   }
   if(verifyData.verified) {
-    myLog("status", "Successfully logged in")
+    logStatus("Authentication verified by server.");
   } else {
-    myLog("status", "Failed to log in")
+    logStatus("Authentication verification failed.");
   }
 }
 
-// 显示消息到html的id元素中。同时在控制台log一下数据
-// 控制台看数据方便一点，但是比较乱
-function myLog(elementId, message, description="", data=null) {
-  document.getElementById(elementId).innerHTML = message;
-  if (data !== null) {
-    console.log(description);
-    console.log(data);
-  }
+// 显示带语法高亮的JSON对象
+function showJson(elementId, object) {
+  const element = document.getElementById(elementId);
+  const formatted = JSON.stringify(object, replacer, 2);
+
+  const { value: highlightedHtml } = hljs.highlight(formatted, { language: 'json' });
+
+  // 添加高亮样式类
+  element.className = 'hljs language-json';
+
+  // 插入生成的带颜色的 HTML 内容
+  element.innerHTML = highlightedHtml;
+}
+
+// 日志函数，追加消息到status元素
+function logStatus(message) {
+  const statusElement = document.getElementById("status");
+  // 追加消息而不是覆盖
+  statusElement.textContent += message + "\n";
 }
 
 // convert URL-safe Base64 to Uint8Array
@@ -151,4 +168,23 @@ function urlSafeBase64ToUint8Array(base64String) {
     }
     
     return uint8Array;
+}
+
+// Convert Uint8Array to Python bytes representation
+function uint8ToPyBytes(uint8) {
+  let hexParts = [];
+  for (let byte of uint8) {
+    // toString(16) 转成16进制，例如 0 -> "0"
+    let hex = byte.toString(16).padStart(2, '0');
+    hexParts.push(`\\x${hex}`);
+  }
+  return `b"${hexParts.join('')}"`;
+}
+
+// JSON replacer function to convert Uint8Array to Python bytes representation
+function replacer(key, value) {
+  if (value instanceof Uint8Array) {
+    return uint8ToPyBytes(value);
+  }
+  return value;
 }
