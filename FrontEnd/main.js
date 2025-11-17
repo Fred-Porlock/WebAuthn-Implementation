@@ -1,4 +1,5 @@
 import hljs from 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/es/highlight.min.js';
+import * as cborg from "https://cdn.jsdelivr.net/npm/cborg@1.10.1/+esm";
 
 // 获取按钮
 const signupButton = document.querySelector("[data-signup]")
@@ -37,7 +38,7 @@ async function signup() {
   publicKeyCredentialCreationOptions.user.id = urlSafeBase64ToUint8Array(publicKeyCredentialCreationOptions.user.id)
 
   // show creation options
-  showJson("creationOption", publicKeyCredentialCreationOptions)
+  showJson("creationOption", publicKeyCredentialCreationOptions, "publicKeyCredentialCreationOptions")
 
   // 2.2 create credential
   const credential = await navigator.credentials.create({
@@ -46,7 +47,67 @@ async function signup() {
 
   // show credential
   logStatus("Passkey created with creation options.");
-  showJson("createdCred", credential)
+  // JSON.stringify会自动添加额外的字段，我们只显示credential本身的字段
+  // 这里省略了一些credential的字段
+  const shownCred = {
+    id: credential.id,
+    rawId: uint8ToPyBytes(new Uint8Array(credential.rawId)),
+    type: credential.type,
+    response: {
+      clientDataJSON: uint8ToPyBytes(new Uint8Array(credential.response.clientDataJSON)),
+      attestationObject: uint8ToPyBytes(new Uint8Array(credential.response.attestationObject)),
+    }
+  }
+  showJson("createdCred", shownCred, "credential")
+
+  // show clientDataJSON decoded
+  const clientDataJSON = JSON.parse(new TextDecoder().decode(credential.response.clientDataJSON))
+  showJson("creationClientDataJSON", clientDataJSON, "clientDataJSON")
+
+  // show attestationObject decoded (CBOR)
+  // decode attestationObject
+  const attestationObject = cborg.decode(new Uint8Array(credential.response.attestationObject))
+  // decode authData inside attestationObject
+  const authDataBuf = attestationObject.authData;
+  const authDataView = new DataView(authDataBuf.buffer);
+  let offset = 0;
+  const rpIdHash = new Uint8Array(authDataBuf.slice(offset, offset + 32));
+  offset += 32;
+  const flags = authDataView.getUint8(offset);
+  offset += 1;
+  const signCount = authDataView.getUint32(offset, false);
+  offset += 4;
+  const attestedCredentialData = {};
+  // check flags.AT (Bit 6: Attested credential data included.)
+  const hasAttestedCredentialData = (flags & 0x40) !== 0;
+  if (hasAttestedCredentialData) {
+    // AAGUID（16字节）
+    attestedCredentialData.aaguid = authDataBuf.slice(offset, offset + 16);
+    offset += 16;
+    // 长度（2字节）
+    attestedCredentialData.credentialIdLength = authDataView.getUint16(offset, false);
+    offset += 2;
+    // Credential ID
+    attestedCredentialData.credentialId = authDataBuf.slice(offset, offset + attestedCredentialData.credentialIdLength);
+    offset += attestedCredentialData.credentialIdLength;
+    // Credential Public Key
+    const cosePublicKey = cborg.decode(authDataBuf.slice(offset), {useMaps: true});
+    const credPK = {};
+    credPK.kty = cosePublicKey.get(1);
+    credPK.alg = cosePublicKey.get(3);
+    credPK.crv = cosePublicKey.get(-1);
+    credPK.x = cosePublicKey.get(-2);
+    credPK.y = cosePublicKey.get(-3);
+    attestedCredentialData.credentialPublicKey = credPK;
+  }
+  showJson("attestationObject", attestationObject, "attestationObject")
+  const shownAuthData = {
+    rpIdHash: uint8ToPyBytes(rpIdHash),
+    flags: "0b" + flags.toString(2).padStart(8, '0'),
+    signCount: signCount,
+    attestedCredentialData: attestedCredentialData
+  }
+  showJson("authData", shownAuthData, "authData")
 
   // 3. Save passkey in DB
   logStatus("Verifying registration with server...")
@@ -125,9 +186,9 @@ async function login() {
 }
 
 // 显示带语法高亮的JSON对象
-function showJson(elementId, object) {
+function showJson(elementId, object, name="") {
   const element = document.getElementById(elementId);
-  const formatted = JSON.stringify(object, replacer, 2);
+  const formatted = name + " = " + JSON.stringify(object, replacer, 2);
 
   const { value: highlightedHtml } = hljs.highlight(formatted, { language: 'json' });
 
@@ -172,13 +233,25 @@ function urlSafeBase64ToUint8Array(base64String) {
 
 // Convert Uint8Array to Python bytes representation
 function uint8ToPyBytes(uint8) {
-  let hexParts = [];
-  for (let byte of uint8) {
-    // toString(16) 转成16进制，例如 0 -> "0"
-    let hex = byte.toString(16).padStart(2, '0');
-    hexParts.push(`\\x${hex}`);
-  }
-  return `b"${hexParts.join('')}"`;
+  // let hexParts = [];
+  // for (let byte of uint8) {
+  //   // toString(16) 转成16进制，例如 0 -> "0"
+  //   let hex = byte.toString(16).padStart(2, '0');
+  //   hexParts.push(`\\x${hex}`);
+  // }
+  // return `b"${hexParts.join('')}"`;
+
+  let parts = [];
+    for (let i = 0; i < uint8.length; i++) {
+        const val = uint8[i];
+        // 可显示字符范围
+        if (val >= 0x20 && val <= 0x7e) {
+            parts.push(String.fromCharCode(val));
+        } else {
+            parts.push('\\x' + val.toString(16).padStart(2, '0'));
+        }
+    }
+    return 'b"' + parts.join('') + '"';
 }
 
 // JSON replacer function to convert Uint8Array to Python bytes representation
