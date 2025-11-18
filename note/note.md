@@ -190,3 +190,24 @@ gottenCredential = {
 
 response.userHandle:
 publicKeyCredentialCreationOptions.user.id
+
+```javascript
+clientDataJSON = {
+  "type": "webauthn.get",
+  "challenge": "2U-AVEA5aIbkfk6neONSnuGp5ZkcZqJ7xCyDP29wyqeb9zjkNh9Seml27Ixao-fATfCDgRf0yUJ5etKIQqcF6w",
+  "origin": "http://localhost:5173",
+  "crossOrigin": false,
+  "other_keys_can_be_added_here": "do not compare clientDataJSON against a template. See https://permanently-removed.invalid/yabPex"
+}
+```
+
+```javascript
+authenticatorData = {
+  "rpIdHash": "b\"I\\x96\\x0d\\xe5\\x88\\x0e\\x8cht4\\x17\\x0fdv`[\\x8f\\xe4\\xae\\xb9\\xa2\\x862\\xc7\\x99\\\\xf3\\xba\\x83\\x1d\\x97c\"",
+  "flags": "0b00000101",
+  "signCount": 1
+}
+```
+
+authenticatorData:
+Credential.response.attestationObject.authData for registration
