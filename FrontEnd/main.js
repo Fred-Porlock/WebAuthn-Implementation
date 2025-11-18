@@ -53,6 +53,7 @@ async function signup() {
     id: credential.id,
     rawId: uint8ToPyBytes(new Uint8Array(credential.rawId)),
     type: credential.type,
+    authenticatorAttachment: credential.authenticatorAttachment,
     response: {
       clientDataJSON: uint8ToPyBytes(new Uint8Array(credential.response.clientDataJSON)),
       attestationObject: uint8ToPyBytes(new Uint8Array(credential.response.attestationObject)),
@@ -153,7 +154,7 @@ async function login() {
   publicKeyCredentialRequestOptions.allowCredentials[0].id = urlSafeBase64ToUint8Array(publicKeyCredentialRequestOptions.allowCredentials[0].id)
 
   // show request options
-  showJson("requestOption", publicKeyCredentialRequestOptions)
+  showJson("requestOption", publicKeyCredentialRequestOptions, "publicKeyCredentialRequestOptions")
 
   // 2.2 获取credential
   const credential = await navigator.credentials.get({
@@ -161,8 +162,41 @@ async function login() {
   })
 
   // show gotten credential
+  const shownCred = {
+    id: credential.id,
+    rawId: uint8ToPyBytes(new Uint8Array(credential.rawId)),
+    type: credential.type,
+    authenticatorAttachment: credential.authenticatorAttachment,
+    response: {
+      clientDataJSON: uint8ToPyBytes(new Uint8Array(credential.response.clientDataJSON)),
+      authenticatorData: uint8ToPyBytes(new Uint8Array(credential.response.authenticatorData)),
+      signature: uint8ToPyBytes(new Uint8Array(credential.response.signature)),
+      userHandle: credential.response.userHandle ? uint8ToPyBytes(new Uint8Array(credential.response.userHandle)) : null,
+    }
+  }
   logStatus("Passkey retrieved with authentication options.");
-  showJson("gottenCred", credential)
+  showJson("gottenCred", shownCred, "gottenCredential")
+
+  // show clientDataJSON decoded
+  const clientDataJSON = JSON.parse(new TextDecoder().decode(credential.response.clientDataJSON))
+  showJson("responseClientDataJSON", clientDataJSON, "clientDataJSON")
+
+  // show authenticatorData decoded
+  const authenticatorDataBuf = new Uint8Array(credential.response.authenticatorData);
+  const authDataView = new DataView(authenticatorDataBuf.buffer);
+  let offset = 0;
+  const rpIdHash = new Uint8Array(authenticatorDataBuf.slice(offset, offset + 32));
+  offset += 32;
+  const flags = authDataView.getUint8(offset);
+  offset += 1;
+  const signCount = authDataView.getUint32(offset, false);
+  offset += 4;
+  const shownAuthData = {
+    rpIdHash: uint8ToPyBytes(rpIdHash),
+    flags: "0b" + flags.toString(2).padStart(8, '0'),
+    signCount: signCount,
+  }
+  showJson("authenticatorData", shownAuthData, "authenticatorData")
 
   // 3. Verify passkey
   logStatus("Verifying authentication with server...")

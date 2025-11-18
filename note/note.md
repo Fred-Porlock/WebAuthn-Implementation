@@ -10,6 +10,8 @@ https://w3c.github.io/webauthn/#dictionary-client-data
 
 ![attestation object](image-2.png)
 
+![assertion signature](image-3.png)
+
 ---
 
 https://w3c.github.io/webauthn/#dictionary-makecredentialoptions
@@ -126,7 +128,7 @@ attStmt:
 Attestation Statement
 表明该公钥是由某个特定的认证器硬件/厂商颁发，并可由依赖方验证其真实性。
 fmt为packed时，包含alg,sig,x5c。x5c是证书链（可选项）。
-sig为对authData和clientDataJSON的哈希的签名。
+**sig为对authData和clientDataJSON的哈希的签名。**
 
 ```javascript
 authData = {
@@ -154,5 +156,37 @@ Signature Counter
 attestedCredentialData.aaguid:
 authenticator Attestation globally unique identifier
 
+---
 
+```javascript
+publicKeyCredentialRequestOptions = {
+  "challenge": "b\"\\x89T\\xd4\\x98\\xb6\\xe2u\\x9dH?evv\\x87\\xc2\\x81\\x8a\\V\\x0c\\x13\\xec\\x81\\xfcD)\\x0d\\x11C\\x19\\x1a\\xd8;\\xff\\x0d\\x11\\xae\\xb0\\x11\\x88\\xd5\\x1e\\xdf_]\\xed\\x91\\xf1\\xf1\\x1f\\x15\\xb6\\x1b1)\\x97\\x82\\xe8\\xed\\x1f\\xe0&e`\"",
+  "timeout": 60000,
+  "rpId": "localhost",
+  "allowCredentials": [
+    {
+      "id": "b\"A\\xb8\\x80,-\\xcb<\\xf1^\\x06\\xc3Ccu\\xa3/\\x8b\\x01\\xd2\\x90Km\\xa4\\xe7\\xc5\\xc1\\xd5\\xf3\\x1a\\xe5\\xfeF\"",
+      "type": "public-key"
+    }
+  ],
+  "userVerification": "preferred"
+}
+```
 
+```javascript
+gottenCredential = {
+  "id": "Fjmx0rKDOfNM4_rVUkn9JcSqjHyiouRRnqyjkBnl4Ew",
+  "rawId": "b\"\\x169\\xb1\\xd2\\xb2\\x839\\xf3L\\xe3\\xfa\\xd5RI\\xfd%\\xc4\\xaa\\x8c|\\xa2\\xa2\\xe4Q\\x9e\\xac\\xa3\\x90\\x19\\xe5\\xe0L\"",
+  "type": "public-key",
+  "authenticatorAttachment": "platform",
+  "response": {
+    "clientDataJSON": "b\"{\"type\":\"webauthn.get\",\"challenge\":\"2tVVjhH_k4sCS2bz7XIeVQUb5HVMGeSwChbIJyibuobpXWiSWHocd013W7u31m7f5yizUF9Rejl6lXaxT5dH_A\",\"origin\":\"http://localhost:5173\",\"crossOrigin\":false,\"other_keys_can_be_added_here\":\"do not compare clientDataJSON against a template. See https://permanently-removed.invalid/yabPex\"}\"",
+    "authenticatorData": "b\"I\\x96\\x0d\\xe5\\x88\\x0e\\x8cht4\\x17\\x0fdv`[\\x8f\\xe4\\xae\\xb9\\xa2\\x862\\xc7\\x99\\\\xf3\\xba\\x83\\x1d\\x97c\\x05\\x00\\x00\\x00\\x01\"",
+    "signature": "b\"0E\\x02!\\x00\\xa0\\xa4\\x7f\\xd2\\xe8C\\xeb\\xf9\\x80F|x(\\xbe!RS\\x11p\\x9e\\x925\\x17.\\xadE\\x0e\\x97\\xd5\\xc0[\\xee\\x02 \\x06V\\xf1]7\\xab[Y\\x9ch\\x041|\\x96\\x11a\\xd1\\x00\\x8a\\x1f\\xf6T\\x10F2\\x86\\xea\\x173\\x0c2\\xdd\"",
+    "userHandle": "b\"i\\x1d8m\\x02\\xbf\\xb4\\xe1#\\x10#\\x8f\\x9e\\x83\\xdc\\x0dc\\x1d\\x8c\\xe3\\xb7a\\xb0\\x8a+\\x00[?z\\xa8fF\\x8a\\x87\\x8f\\x80\\xcb5{\\xe9\\xff$\\xec\\x9a\\x92\\x9a\\xeaDH\\x1c\\xae\\x92[\\x0b\\x1b\\xcc\\x96\\xce(\\xfc\\xe0\\xe6\\x09\\xfb\""
+  }
+}
+```
+
+response.userHandle:
+publicKeyCredentialCreationOptions.user.id
